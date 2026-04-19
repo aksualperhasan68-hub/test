@@ -1,13 +1,18 @@
-// 1. RENDER KANDIRMA: Port açıyoruz
+// 1. RENDER KANDIRMA: Port açarak botun kapanmasını engeller
 const http = require('http');
-http.createServer((req, res) => {
-    res.write("Bot Aktif!");
-    res.end();
-}).listen(process.env.PORT || 3000);
+const server = http.createServer((req, res) => {
+    res.writeHead(200);
+    res.end("Bot Aktif!");
+});
+server.listen(process.env.PORT || 3000);
 
-// 2. IPv4 ZORLAMASI
+// 2. IPv4 ZORLAMASI: Discord ses sunucularına bağlanma sorununu çözer
 const dns = require('dns');
 dns.setDefaultResultOrder('ipv4first'); 
+
+// 3. FFMPEG YOLU: Sesin hemen kesilmesini önler
+const ffmpegPath = require('ffmpeg-static');
+process.env.FFMPEG_PATH = ffmpegPath;
 
 const { Client, GatewayIntentBits } = require('discord.js');
 const { 
@@ -28,20 +33,26 @@ const client = new Client({
 });
 
 const TOKEN = process.env.TOKEN;
-
-// GÜVENİLİR TEST MP3 LİNKİ (Siteden Bulundu)
 const MP3_URL = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
 
-client.once('clientReady', () => {
-    console.log(`✅ ${client.user.tag} hazır! İnternet MP3 modu aktif.`);
+// Çift mesajı ve çakışmayı önlemek için kontrol
+let isProcessing = false;
+
+client.once('ready', () => {
+    console.log(`✅ ${client.user.tag} Render'da hazır!`);
 });
 
 client.on('messageCreate', async (message) => {
     if (!message.guild || message.author.bot) return;
 
     if (message.content === '!çal') {
+        // Eğer bot zaten bir işlem yapıyorsa bekle
+        if (isProcessing) return;
+        
         const voiceChannel = message.member.voice.channel;
         if (!voiceChannel) return message.reply('❌ Önce ses kanalına gir!');
+
+        isProcessing = true;
 
         try {
             const connection = joinVoiceChannel({
@@ -54,25 +65,27 @@ client.on('messageCreate', async (message) => {
                 behaviors: { noSubscriber: NoSubscriberBehavior.Play },
             });
 
-            // Doğrudan URL üzerinden kaynak oluşturuyoruz
             const resource = createAudioResource(MP3_URL);
 
             player.play(resource);
             connection.subscribe(player);
 
-            message.channel.send('🎵 İnternet üzerinden MP3 çalınıyor, lütfen sesi kontrol et!');
+            await message.channel.send('🎵 Ses çalınıyor! (İnternet üzerinden)');
 
             player.on(AudioPlayerStatus.Idle, () => {
                 connection.destroy();
+                isProcessing = false;
                 console.log('✅ Çalma bitti.');
             });
 
             player.on('error', error => {
                 console.error('❌ Oynatıcı hatası:', error.message);
+                isProcessing = false;
             });
 
         } catch (error) {
-            console.error('Hata:', error);
+            console.error('Bağlantı hatası:', error);
+            isProcessing = false;
         }
     }
 });
