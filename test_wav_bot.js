@@ -1,20 +1,14 @@
-// 1. RENDER KANDIRMA TAKTİĞİ: Sahte Web Sunucusu
+// 1. RENDER KANDIRMA: Port açıyoruz
 const http = require('http');
 http.createServer((req, res) => {
-    res.write("Bot aktif ve calisiyor!");
+    res.write("Bot Aktif!");
     res.end();
 }).listen(process.env.PORT || 3000);
 
-// 2. RENDER IPv6 ÇÖZÜMÜ: IPv4 kullanmaya zorluyoruz
+// 2. IPv4 ZORLAMASI
 const dns = require('dns');
 dns.setDefaultResultOrder('ipv4first'); 
 
-// 3. FFMPEG MOTORUNUN YERİNİ ZORLA GÖSTERİYORUZ
-const ffmpegPath = require('ffmpeg-static');
-process.env.FFMPEG_PATH = ffmpegPath;
-
-const fs = require('fs');
-const path = require('path');
 const { Client, GatewayIntentBits } = require('discord.js');
 const { 
     joinVoiceChannel, 
@@ -33,11 +27,13 @@ const client = new Client({
     ],
 });
 
-// Token'ı Render ayarlarından (Environment Variables) çekiyoruz
 const TOKEN = process.env.TOKEN;
 
+// GÜVENİLİR TEST MP3 LİNKİ (Siteden Bulundu)
+const MP3_URL = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
+
 client.once('clientReady', () => {
-    console.log(`✅ ${client.user.tag} Render'da tamamen hazır! Port, FFmpeg ve IPv4 aktif.`);
+    console.log(`✅ ${client.user.tag} hazır! İnternet MP3 modu aktif.`);
 });
 
 client.on('messageCreate', async (message) => {
@@ -45,10 +41,7 @@ client.on('messageCreate', async (message) => {
 
     if (message.content === '!çal') {
         const voiceChannel = message.member.voice.channel;
-        
-        if (!voiceChannel) {
-            return message.reply('❌ Önce bir ses kanalına gir!');
-        }
+        if (!voiceChannel) return message.reply('❌ Önce ses kanalına gir!');
 
         try {
             const connection = joinVoiceChannel({
@@ -58,37 +51,20 @@ client.on('messageCreate', async (message) => {
             });
 
             const player = createAudioPlayer({
-                behaviors: {
-                    noSubscriber: NoSubscriberBehavior.Play,
-                },
+                behaviors: { noSubscriber: NoSubscriberBehavior.Play },
             });
-            
-            // DEDEKTİF VE YEDEK PLAN KISMI
-            const sesDosyasiYolu = path.join(__dirname, 'cevap_sesi_1.mp3');
-            let resource;
 
-            if (fs.existsSync(sesDosyasiYolu)) {
-                // Eğer kendi dosyan Render sunucusuna başarıyla yüklenmişse
-                console.log("✅ Dosya bulundu, çalınıyor.");
-                resource = createAudioResource(sesDosyasiYolu);
-                message.channel.send('🎵 Kendi ses dosyan çalınıyor!');
-            } else {
-                // Eğer Render kendi dosyanı bulamazsa kanaldan çıkmak yerine test müziği çalar
-                console.log("🚨 cevap_sesi_1.mp3 BULUNAMADI! Yedek test müziği çalınıyor.");
-                resource = createAudioResource('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
-                message.channel.send('⚠️ Dosyan sunucuda bulunamadığı için YEDEK internet müziği çalınıyor. Lütfen `cevap_sesi_1.mp3` dosyanı Render/GitHub\'a yüklediğinden emin ol.');
-            }
+            // Doğrudan URL üzerinden kaynak oluşturuyoruz
+            const resource = createAudioResource(MP3_URL);
 
             player.play(resource);
             connection.subscribe(player);
 
+            message.channel.send('🎵 İnternet üzerinden MP3 çalınıyor, lütfen sesi kontrol et!');
+
             player.on(AudioPlayerStatus.Idle, () => {
                 connection.destroy();
-                console.log('✅ Ses bitti, kanaldan çıkıldı.');
-            });
-
-            resource.playStream?.on('error', error => {
-                console.error('❌ Akış/FFmpeg Hatası:', error.message);
+                console.log('✅ Çalma bitti.');
             });
 
             player.on('error', error => {
@@ -97,14 +73,8 @@ client.on('messageCreate', async (message) => {
 
         } catch (error) {
             console.error('Hata:', error);
-            message.channel.send('❌ Kritik bir bağlantı hatası oluştu.');
         }
     }
 });
-
-if (!TOKEN) {
-    console.error("❌ HATA: Token bulunamadı. Lütfen Render'da 'TOKEN' değişkenini ekleyin.");
-    process.exit(1);
-}
 
 client.login(TOKEN);
