@@ -1,11 +1,15 @@
-// 1. RENDER KANDIRMA TAKTİĞİ: Sahte Web Sunucusu açıyoruz
+// 1. FFMPEG MOTORUNUN YERİNİ ZORLA GÖSTERİYORUZ (Hemen çıkma sorununun kesin çözümü!)
+const ffmpegPath = require('ffmpeg-static');
+process.env.FFMPEG_PATH = ffmpegPath;
+
+// 2. RENDER KANDIRMA TAKTİĞİ: Sahte Web Sunucusu
 const http = require('http');
 http.createServer((req, res) => {
-    res.write("Bot aktif ve calisiyor!");
+    res.write("Bot aktif!");
     res.end();
 }).listen(process.env.PORT || 3000);
 
-// 2. RENDER IPv6 ÇÖZÜMÜ: IPv4 kullanmaya zorluyoruz
+// 3. RENDER IPv6 ÇÖZÜMÜ
 const dns = require('dns');
 dns.setDefaultResultOrder('ipv4first'); 
 
@@ -17,6 +21,7 @@ const {
     AudioPlayerStatus,
     NoSubscriberBehavior
 } = require('@discordjs/voice');
+const path = require('path');
 
 const client = new Client({
     intents: [
@@ -27,11 +32,10 @@ const client = new Client({
     ],
 });
 
-// Token'ı Render ayarlarından çekiyoruz
 const TOKEN = process.env.TOKEN;
 
 client.once('clientReady', () => {
-    console.log(`✅ ${client.user.tag} Render'da tamamen hazır! Port açık, IPv4 aktif.`);
+    console.log(`✅ ${client.user.tag} Render'da hazır! FFmpeg yolu tanıtıldı.`);
 });
 
 client.on('messageCreate', async (message) => {
@@ -57,17 +61,25 @@ client.on('messageCreate', async (message) => {
                 },
             });
             
-            // DOSYA BULUNAMAMA HATASINI ÖNLEMEK İÇİN İNTERNETTEN ÇALIYORUZ
-            const resource = createAudioResource('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
+            // Eğer cevap_sesi_1.mp3 dosyanı Render'a/GitHub'a yüklediğinden EMİNSEN:
+            // Aşağıdaki 2 satırı kullan. (Yüklemediysen bot bulamadığı için yine anında çıkar!)
+            // İnternetten çalmak için resource kısmını bir önceki koddaki linkle değiştirebilirsin.
+            const sesDosyasiYolu = path.join(__dirname, 'cevap_sesi_1.mp3');
+            const resource = createAudioResource(sesDosyasiYolu);
 
             player.play(resource);
             connection.subscribe(player);
 
-            message.channel.send('🎵 Render üzerinden internet müziği çalınıyor!');
+            message.channel.send('🎵 Ses çalınıyor!');
 
             player.on(AudioPlayerStatus.Idle, () => {
                 connection.destroy();
                 console.log('✅ Ses bitti, kanaldan çıkıldı.');
+            });
+
+            // GİZLİ FFmpeg HATALARINI YAKALAMAK İÇİN:
+            resource.playStream.on('error', error => {
+                console.error('❌ Akış/FFmpeg Hatası:', error.message);
             });
 
             player.on('error', error => {
@@ -81,7 +93,7 @@ client.on('messageCreate', async (message) => {
 });
 
 if (!TOKEN) {
-    console.error("❌ HATA: Bot token'ı bulunamadı. Render ayarlarından (Environment Variables) ekleyin.");
+    console.error("❌ HATA: Token bulunamadı.");
     process.exit(1);
 }
 
