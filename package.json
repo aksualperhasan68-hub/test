@@ -1,18 +1,17 @@
 {
-  "name": "discord-wav-test",
+  "name": "discord-ses-botu",
   "version": "1.0.0",
-  "private": true,
-  "description": "Discord ses bağlantısı + WAV oynatma testi (Node.js)",
-  "main": "test_wav_bot.js",
+  "description": "Render için Discord Ses Botu",
+  "main": "index.js",
   "scripts": {
-    "start": "node test_wav_bot.js"
+    "start": "node index.js"
   },
   "dependencies": {
+    "discord.js": "^14.14.1",
+    "@discordjs/voice": "^0.17.0",
     "@discordjs/opus": "^0.9.0",
-    "@discordjs/voice": "^0.18.0",
-    "discord.js": "^14.26.3",
     "ffmpeg-static": "^5.2.0",
-    "libsodium-wrappers": "^0.7.16",
-    "opusscript": "^0.0.8"
+    "libsodium-wrappers": "^0.7.13",
+    "tweetnacl": "^1.0.3"
   }
 }
