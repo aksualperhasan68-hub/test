@@ -1,12 +1,16 @@
+// Render'ın botu uyutmaması için mini web sunucusu
+const http = require('http');
+http.createServer((req, res) => res.end('Bot aktif!')).listen(process.env.PORT || 3000);
+
 require('node:dns').setDefaultResultOrder('ipv4first');
 const { Client, GatewayIntentBits, Events } = require('discord.js');
-const {
-    joinVoiceChannel,
-    createAudioPlayer,
-    createAudioResource,
-    AudioPlayerStatus,
-    entersState,
-    VoiceConnectionStatus
+const { 
+    joinVoiceChannel, 
+    createAudioPlayer, 
+    createAudioResource, 
+    AudioPlayerStatus, 
+    entersState, 
+    VoiceConnectionStatus 
 } = require('@discordjs/voice');
 const path = require('path');
 
@@ -14,12 +18,15 @@ const client = new Client({
     intents:[
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildVoiceStates
+        GatewayIntentBits.MessageContent, 
+        GatewayIntentBits.GuildVoiceStates 
     ]
 });
 
-const TOKEN = 'MTM5NTg1NjgyNjczNzc1ODMzMA.GEiyhH.skOtnBvssR4I-x2Rsigdu8jxpPIUKq8m7dcQks';
+// TOKEN KISMI
+// Render'da Environment Variables kısmına "TOKEN" yazıp değerini girmen daha güvenlidir.
+// Ama istersen tırnak içine buraya da yapıştırabilirsin:
+const TOKEN = process.env.TOKEN || 'BURAYA_TOKENINI_YAZ';
 
 client.once(Events.ClientReady, () => {
     console.log(`🤖 Bot giriş yaptı: ${client.user.tag}`);
@@ -40,28 +47,22 @@ client.on(Events.MessageCreate, async (message) => {
             selfMute: false
         });
 
-        // Bağlantı durumlarını izle
-        connection.on('stateChange', (oldState, newState) => {
-            console.log(`📡 Durum: ${oldState.status} -> ${newState.status}`);
-        });
-
         const player = createAudioPlayer();
         connection.subscribe(player);
 
-        // Bağlanmayı bekle (Süreyi 30 saniye yaptık)
         try {
             await entersState(connection, VoiceConnectionStatus.Ready, 30_000);
-
-            // Bağlantı kurulur kurulmaz sesi çal
+            
+            // Dosya yolunu Render ortamına uygun şekilde alıyoruz
             const filePath = path.join(__dirname, 'cevap_sesi_1.wav');
             const resource = createAudioResource(filePath);
             player.play(resource);
-
+            
             message.reply('🎵 Ses çalınıyor!');
         } catch (error) {
             console.error('❌ Bağlantı hatası:', error);
             connection.destroy();
-            message.reply('Ses kanalına bağlanılamadı (UDP engeli).');
+            message.reply('Ses kanalına bağlanılamadı.');
         }
 
         player.on(AudioPlayerStatus.Idle, () => connection.destroy());
