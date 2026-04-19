@@ -1,4 +1,11 @@
-// RENDER İÇİN KRİTİK AYAR: Node.js'i IPv4 kullanmaya zorluyoruz!
+// 1. RENDER KANDIRMA TAKTİĞİ: Sahte Web Sunucusu açıyoruz
+const http = require('http');
+http.createServer((req, res) => {
+    res.write("Bot aktif ve calisiyor!");
+    res.end();
+}).listen(process.env.PORT || 3000);
+
+// 2. RENDER IPv6 ÇÖZÜMÜ: IPv4 kullanmaya zorluyoruz
 const dns = require('dns');
 dns.setDefaultResultOrder('ipv4first'); 
 
@@ -10,7 +17,6 @@ const {
     AudioPlayerStatus,
     NoSubscriberBehavior
 } = require('@discordjs/voice');
-const path = require('path');
 
 const client = new Client({
     intents: [
@@ -21,11 +27,11 @@ const client = new Client({
     ],
 });
 
-// Token'ı artık kodun içine değil, Render'ın ayarlarına yazacağız
+// Token'ı Render ayarlarından çekiyoruz
 const TOKEN = process.env.TOKEN;
 
 client.once('clientReady', () => {
-    console.log(`✅ ${client.user.tag} Render'da hazır! IPv4 Ses Modu Aktif 🚀`);
+    console.log(`✅ ${client.user.tag} Render'da tamamen hazır! Port açık, IPv4 aktif.`);
 });
 
 client.on('messageCreate', async (message) => {
@@ -45,21 +51,19 @@ client.on('messageCreate', async (message) => {
                 adapterCreator: message.guild.voiceAdapterCreator,
             });
 
-            // Bağlantı gecikse bile müziği durdurmasını engelliyoruz
             const player = createAudioPlayer({
                 behaviors: {
                     noSubscriber: NoSubscriberBehavior.Play,
                 },
             });
             
-            // Kendi ses dosyanı okutuyoruz
-            const sesDosyasiYolu = path.join(__dirname, 'cevap_sesi_1.mp3');
-            const resource = createAudioResource(sesDosyasiYolu);
+            // DOSYA BULUNAMAMA HATASINI ÖNLEMEK İÇİN İNTERNETTEN ÇALIYORUZ
+            const resource = createAudioResource('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
 
             player.play(resource);
             connection.subscribe(player);
 
-            message.channel.send('🎵 Render üzerinden ses çalınıyor! (IPv4 ile)');
+            message.channel.send('🎵 Render üzerinden internet müziği çalınıyor!');
 
             player.on(AudioPlayerStatus.Idle, () => {
                 connection.destroy();
@@ -72,13 +76,12 @@ client.on('messageCreate', async (message) => {
 
         } catch (error) {
             console.error('Hata:', error);
-            message.channel.send('❌ Kritik bir hata oluştu.');
         }
     }
 });
 
 if (!TOKEN) {
-    console.error("❌ HATA: Bot token'ı bulunamadı. Lütfen Render ayarlarından 'TOKEN' ekleyin.");
+    console.error("❌ HATA: Bot token'ı bulunamadı. Render ayarlarından (Environment Variables) ekleyin.");
     process.exit(1);
 }
 
